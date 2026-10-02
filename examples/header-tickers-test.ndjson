@@ -1,0 +1,2 @@
+{"_id":"header-updates","_type":"headerUpdates","title":"Header Updates","items":[{"_key":"test-update-1","text":"TEST — Sanity updates ticker (remove after testing)","link":"https://example.com","isActive":true}]}
+{"_id":"header-quicklinks","_type":"headerQuicklinks","title":"Header Quick Links","items":[{"_key":"test-quicklink-1","text":"TEST — Sanity quick links ticker (remove after testing)","link":"https://example.com","isActive":true}]}
