@@ -2,27 +2,46 @@ param(
   [string]$WebsiteRoot = (Join-Path $PSScriptRoot '..\..\vkcet')
 )
 
-$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Continue'
+$OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $StudioRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $WebsiteRoot = (Resolve-Path $WebsiteRoot).Path
 $ProjectId = 'udbptroj'
 $Dataset = 'production'
+$UploadedAssets = @{}
+
+function Invoke-SanityCommand([string[]]$Arguments) {
+  $stdoutPath = Join-Path $env:TEMP ("sanity-stdout-$([guid]::NewGuid().ToString('N')).txt")
+  $stderrPath = Join-Path $env:TEMP ("sanity-stderr-$([guid]::NewGuid().ToString('N')).txt")
+  & npx @Arguments 1> $stdoutPath 2> $stderrPath
+  $exitCode = $LASTEXITCODE
+  $stdout = if (Test-Path $stdoutPath) { [System.IO.File]::ReadAllText($stdoutPath) } else { '' }
+  $stderr = if (Test-Path $stderrPath) { [System.IO.File]::ReadAllText($stderrPath) } else { '' }
+  Remove-Item $stdoutPath, $stderrPath -Force -ErrorAction SilentlyContinue
+  return @{ExitCode = $exitCode; Output = ($stdout + "`n" + $stderr)}
+}
 
 function Upload-ImageFile([string]$Path, [string]$Alt) {
   if (-not (Test-Path $Path)) { throw "Image not found: $Path" }
-  $output = (& npx sanity assets upload --file $Path --type image --dataset $Dataset --project-id $ProjectId 2>&1 | Out-String)
-  if ($LASTEXITCODE -ne 0) { throw "Sanity image upload failed for '$Path':`n$output" }
-  $match = [regex]::Match($output, 'Uploaded image asset:\s*(image-[a-f0-9]+-\d+x\d+-[a-z0-9]+)')
-  if (-not $match.Success) { throw "Could not read uploaded asset ID for '$Path':`n$output" }
-  return @{_type = 'image'; alt = $Alt; asset = @{_type = 'reference'; _ref = $match.Groups[1].Value}}
+  $resolvedPath = (Resolve-Path $Path).Path
+  if (-not $UploadedAssets.ContainsKey($resolvedPath)) {
+    $result = Invoke-SanityCommand @('sanity', 'assets', 'upload', '--file', $resolvedPath, '--type', 'image', '--dataset', $Dataset, '--project-id', $ProjectId)
+    if ($result.ExitCode -ne 0) { throw "Sanity image upload failed for '$resolvedPath':`n$($result.Output)" }
+    $output = [regex]::Replace($result.Output, '\x1B\[[0-?]*[ -/]*[@-~]', '')
+    $match = [regex]::Match($output, 'image-[a-f0-9]{40}-\d+x\d+-[a-z0-9]+')
+    if (-not $match.Success) { throw "Could not read uploaded asset ID for '$resolvedPath':`n$output" }
+    $UploadedAssets[$resolvedPath] = $match.Value
+  }
+  return @{_type = 'image'; alt = $Alt; asset = @{_type = 'reference'; _ref = $UploadedAssets[$resolvedPath]}}
 }
 
 function Upload-ImageUrl([string]$Url, [string]$Alt) {
-  $output = (& npx sanity assets upload --from-url $Url --type image --dataset $Dataset --project-id $ProjectId 2>&1 | Out-String)
-  if ($LASTEXITCODE -ne 0) { throw "Sanity image URL upload failed for '$Url':`n$output" }
-  $match = [regex]::Match($output, 'Uploaded image asset:\s*(image-[a-f0-9]+-\d+x\d+-[a-z0-9]+)')
+  $result = Invoke-SanityCommand @('sanity', 'assets', 'upload', '--from-url', $Url, '--type', 'image', '--dataset', $Dataset, '--project-id', $ProjectId)
+  if ($result.ExitCode -ne 0) { throw "Sanity image URL upload failed for '$Url':`n$($result.Output)" }
+  $output = [regex]::Replace($result.Output, '\x1B\[[0-?]*[ -/]*[@-~]', '')
+  $match = [regex]::Match($output, 'image-[a-f0-9]{40}-\d+x\d+-[a-z0-9]+')
   if (-not $match.Success) { throw "Could not read uploaded asset ID for '$Url':`n$output" }
-  return @{_type = 'image'; alt = $Alt; asset = @{_type = 'reference'; _ref = $match.Groups[1].Value}}
+  return @{_type = 'image'; alt = $Alt; asset = @{_type = 'reference'; _ref = $match.Value}}
 }
 
 Push-Location $StudioRoot
@@ -32,8 +51,8 @@ try {
     $path = Join-Path $WebsiteRoot "public\vkcet\hero\slide-$i.png"
     $heroSlides += @{_key = "hero-$i"; alt = "VKCET campus hero slide $i"; image = (Upload-ImageFile $path "VKCET campus hero slide $i")}
   }
-  $heroSlides += @{_key = 'hero-unsplash-1'; alt = 'Engineering campus'; image = (Upload-ImageUrl 'https://images.unsplash.com/photo-1773829020694-413e879d2957?auto=format&fit=crop&w=1800&q=70' 'Engineering campus')}
-  $heroSlides += @{_key = 'hero-unsplash-2'; alt = 'Students on campus'; image = (Upload-ImageUrl 'https://images.unsplash.com/photo-1758270705482-cee87ea98738?auto=format&fit=crop&w=1800&q=70' 'Students on campus')}
+  $heroSlides += @{_key = 'hero-unsplash-1'; alt = 'Engineering campus'; imageUrl = 'https://images.unsplash.com/photo-1773829020694-413e879d2957?auto=format&fit=crop&w=1800&q=70'}
+  $heroSlides += @{_key = 'hero-unsplash-2'; alt = 'Students on campus'; imageUrl = 'https://images.unsplash.com/photo-1758270705482-cee87ea98738?auto=format&fit=crop&w=1800&q=70'}
 
   $programs = @(
     @{key='civil'; title='Civil Engineering'; href='/course/civil-engineering'; content='60 Seats'; icon='civil'; image='https://vkcet.com/wp-content/uploads/2024/07/60.jpg'},
@@ -46,7 +65,7 @@ try {
   $programDocuments = @()
   foreach ($program in $programs) {
     $card = @{_key=$program.key; title=$program.title; href=$program.href; content=$program.content; icon=$program.icon; styleClass='style1'}
-    if ($program.image) { $card.backgroundImage = Upload-ImageUrl $program.image "$($program.title) program" }
+    if ($program.image) { $card.backgroundImageUrl = $program.image }
     $programDocuments += $card
   }
 
@@ -123,8 +142,12 @@ try {
   $ndjson = ($documents | ForEach-Object { ConvertTo-Json -InputObject $_ -Depth 100 -Compress }) -join "`n"
   foreach ($line in $ndjson -split "`n") { $null = $line | ConvertFrom-Json }
   Write-Output "Importing 1 homepage, 2 events, and $($testimonialSource.Count) separate testimonials."
-  $ndjson | & npx sanity datasets import - --dataset $Dataset --project-id $ProjectId --missing
-  if ($LASTEXITCODE -ne 0) { throw 'Sanity dataset import failed.' }
+  $tempFile = Join-Path $env:TEMP ("vkcet-homepage-$([guid]::NewGuid().ToString('N')).ndjson")
+  [System.IO.File]::WriteAllText($tempFile, $ndjson, (New-Object System.Text.UTF8Encoding($false)))
+  $import = Invoke-SanityCommand @('sanity', 'datasets', 'import', $tempFile, '--dataset', $Dataset, '--project-id', $ProjectId, '--missing')
+  Write-Output $import.Output
+  if ($import.ExitCode -ne 0) { throw 'Sanity dataset import failed.' }
+  Remove-Item $tempFile -Force
 }
 finally {
   Pop-Location

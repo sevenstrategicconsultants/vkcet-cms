@@ -59,7 +59,8 @@ export const homePage = defineType({
           title: 'Slide',
           type: 'object',
           fields: [
-            defineField({name: 'image', title: 'Image', type: 'image', options: {hotspot: true}, validation: (Rule) => Rule.required()}),
+            defineField({name: 'image', title: 'Sanity image asset', type: 'image', options: {hotspot: true}}),
+            defineField({name: 'imageUrl', title: 'External image URL', type: 'url'}),
             defineField({name: 'alt', title: 'Alternative text', type: 'string'}),
           ],
           preview: {select: {title: 'alt', media: 'image'}},
@@ -145,6 +146,7 @@ export const homePage = defineType({
             defineField({name: 'icon', title: 'Card icon', type: 'string', options: {list: ['cse', 'cyber', 'civil', 'eee', 'ece', 'mech']}}),
             defineField({name: 'styleClass', title: 'Card style', type: 'string', options: {list: ['style1', 'style2']}, initialValue: 'style1'}),
             defineField({name: 'backgroundImage', title: 'Card image', type: 'image', options: {hotspot: true}}),
+            defineField({name: 'backgroundImageUrl', title: 'External card image URL', type: 'url'}),
           ],
           preview: {select: {title: 'title', subtitle: 'content', media: 'backgroundImage'}},
         }),
