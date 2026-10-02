@@ -7,6 +7,7 @@ COPY . .
 RUN npm run build
 
 FROM nginx:alpine
+RUN sed -i '/[[:space:]]mjs;/d; /application\/javascript/ s/;$/ mjs;/' /etc/nginx/mime.types
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist/ /usr/share/nginx/html/
 ENV PORT=8080
