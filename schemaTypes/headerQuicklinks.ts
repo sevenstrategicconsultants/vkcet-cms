@@ -1,4 +1,5 @@
 import {defineArrayMember, defineField, defineType} from 'sanity'
+import {validateUniqueTickerLinks} from './validateUniqueTickerLinks'
 
 export const headerQuicklinks = defineType({
   name: 'headerQuicklinks',
@@ -16,6 +17,7 @@ export const headerQuicklinks = defineType({
       name: 'items',
       title: 'Items',
       type: 'array',
+      validation: (Rule) => Rule.custom(validateUniqueTickerLinks),
       of: [
         defineArrayMember({
           name: 'headerQuicklink',
