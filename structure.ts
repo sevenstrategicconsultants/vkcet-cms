@@ -42,19 +42,11 @@ export const structure: StructureResolver = (S) => {
                             .documentId('founder-profile')
                             .title('Founder Chairman'),
                         ),
-                      S.listItem()
-                        .title('Management')
-                        .child(
-                          S.list()
-                            .title('Management')
-                            .items([
-                              memberSection('President', 'management', 'President'),
-                              memberSection('Vice President', 'management', 'Vice President'),
-                              memberSection('Secretary', 'management', 'Secretary'),
-                              memberSection('Joint Secretary', 'management', 'Joint Secretary'),
-                              memberSection('Treasurer', 'management', 'Treasurer'),
-                            ]),
-                        ),
+                      memberSection('Management — President', 'management', 'President'),
+                      memberSection('Management — Vice President', 'management', 'Vice President'),
+                      memberSection('Management — Secretary', 'management', 'Secretary'),
+                      memberSection('Management — Joint Secretary', 'management', 'Joint Secretary'),
+                      memberSection('Management — Treasurer', 'management', 'Treasurer'),
                       memberSection('Executive Director', 'executive-director'),
                       memberSection('Assistant Director', 'assistant-director'),
                       memberSection('Principal', 'principal'),
