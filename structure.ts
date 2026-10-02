@@ -2,7 +2,7 @@ import type {StructureResolver} from 'sanity/structure'
 
 export const structure: StructureResolver = (S) => {
   const defaultItems = S.documentTypeListItems().filter(
-    (item) => !['founderProfile', 'governingBodyMember'].includes(item.getId() ?? ''),
+    (item) => !['founderProfile', 'governingBodyMember', 'managementProfiles'].includes(item.getId() ?? ''),
   )
 
   const memberSection = (title: string, category: string, role?: string) =>
@@ -17,6 +17,16 @@ export const structure: StructureResolver = (S) => {
               : '_type == "governingBodyMember" && category == $category',
           )
           .params({category, ...(role ? {role} : {})}),
+      )
+
+  const singleMember = (title: string, documentId: string) =>
+    S.listItem()
+      .title(title)
+      .child(
+        S.document()
+          .schemaType('governingBodyMember')
+          .documentId(documentId)
+          .title(title),
       )
 
   return S.list()
@@ -42,17 +52,20 @@ export const structure: StructureResolver = (S) => {
                             .documentId('founder-profile')
                             .title('Founder Chairman'),
                         ),
-                      memberSection('Management — President', 'management', 'President'),
-                      memberSection('Management — Vice President', 'management', 'Vice President'),
-                      memberSection('Management — Secretary', 'management', 'Secretary'),
-                      memberSection('Management — Joint Secretary', 'management', 'Joint Secretary'),
-                      memberSection('Management — Treasurer', 'management', 'Treasurer'),
-                      memberSection('Executive Director', 'executive-director'),
-                      memberSection('Assistant Director', 'assistant-director'),
-                      memberSection('Principal', 'principal'),
-                      memberSection('Vice Principal', 'vice-principal'),
-                      memberSection('Dean Student Affairs', 'dean-student-affairs'),
-                      memberSection('Administrative Officer', 'administrative-officer'),
+                      S.listItem()
+                        .title('Management')
+                        .child(
+                          S.document()
+                            .schemaType('managementProfiles')
+                            .documentId('management-profiles')
+                            .title('Management'),
+                        ),
+                      singleMember('Executive Director', 'executive-director'),
+                      singleMember('Assistant Director', 'assistant-director'),
+                      singleMember('Principal', 'principal'),
+                      singleMember('Vice Principal', 'vice-principal'),
+                      singleMember('Dean Student Affairs', 'dean-student-affairs'),
+                      singleMember('Administrative Officer', 'administrative-officer'),
                       memberSection('Department Heads', 'department-heads'),
                     ]),
                 ),
