@@ -2,7 +2,7 @@ import type {StructureResolver} from 'sanity/structure'
 
 export const structure: StructureResolver = (S) => {
   const defaultItems = S.documentTypeListItems().filter(
-    (item) => !['founderProfile', 'governingBodyMember', 'managementProfiles'].includes(item.getId() ?? ''),
+    (item) => !['homePage', 'founderProfile', 'governingBodyMember', 'managementProfiles'].includes(item.getId() ?? ''),
   )
 
   const memberSection = (title: string, category: string, role?: string) =>
@@ -32,6 +32,9 @@ export const structure: StructureResolver = (S) => {
   return S.list()
     .title('VKCET Content')
     .items([
+      S.listItem()
+        .title('Home Page')
+        .child(S.document().schemaType('homePage').documentId('home-page').title('Home Page')),
       S.listItem()
         .title('Site Header Menu')
         .child(
